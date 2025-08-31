@@ -1,0 +1,1 @@
+# soat-tech-challenge-infra-lambda-auth
