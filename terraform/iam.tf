@@ -63,7 +63,7 @@ resource "aws_iam_policy" "orchestrator_lambda_policy" {
         Resource = "arn:aws:logs:*:*:*"
       },
       {
-        Action   = ["cognito-idp:AdminInitiateAuth", "cognito-idp:AdminRespondToAuthChallenge"],
+        Action   = ["cognito-idp:ListUsers", "cognito-idp:AdminInitiateAuth", "cognito-idp:AdminRespondToAuthChallenge"],
         Effect   = "Allow",
         Resource = aws_cognito_user_pool.user_pool.arn
       }

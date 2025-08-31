@@ -10,9 +10,6 @@ resource "aws_cognito_user_pool" "user_pool" {
   username_attributes = ["phone_number"] # O login será o número de telefone
   auto_verified_attributes = ["phone_number"]
 
-  # Habilita o fluxo de autenticação customizado
-  authentication_flow_type = "CUSTOM_AUTH"
-
   # Configuração dos triggers Lambda
   lambda_config {
     define_auth_challenge             = aws_lambda_function.define_auth_challenge.arn

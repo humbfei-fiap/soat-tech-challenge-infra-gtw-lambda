@@ -1,0 +1,84 @@
+name: 'Terraform: Validate and Create PR to Develop'
+
+# Gatilho: Executa em qualquer push para branches que comecem com 'feature/'
+on:
+  push:
+    branches:
+      - 'feature/**'
+
+jobs:
+  validate_and_create_pr:
+    name: 'Validate Terraform and Create PR'
+    runs-on: ubuntu-latest
+
+    # Permissões necessárias para a action criar o Pull Request
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      # 1. Faz o checkout do código da sua branch 'feature/'
+      - name: 'Checkout code'
+        uses: actions/checkout@v4
+
+      # 2. Configura o ambiente Terraform
+      - name: 'Setup Terraform'
+        uses: hashicorp/setup-terraform@v3
+        with:
+          # É uma boa prática fixar a versão do Terraform
+          terraform_version: 1.8.5
+
+      # 3. Verifica a formatação do código Terraform
+      - name: 'Terraform Format Check'
+        id: fmt
+        run: terraform fmt -check -recursive
+
+      # 4. Inicializa o Terraform
+      - name: 'Terraform Init'
+        id: init
+        run: terraform init
+
+      # 5. Valida a sintaxe do código Terraform
+      - name: 'Terraform Validate'
+        id: validate
+        run: terraform validate
+
+      # 6. Gera um plano de execução para garantir que não há erros lógicos
+      - name: 'Terraform Plan'
+        id: plan
+        run: terraform plan -input=false -no-color
+
+      # 7. Cria o Pull Request se todos os passos anteriores tiveram sucesso
+      - name: 'Create Pull Request to Develop'
+        # Esta action verifica se já existe um PR da mesma branch e o atualiza
+        uses: peter-evans/create-pull-request@v6
+        with:
+          # O GITHUB_TOKEN é gerado automaticamente pelo GitHub Actions
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Título do Pull Request usando o nome da branch
+          title: 'feat: Propostas de mudança da branch ${{ github.ref_name }}'
+
+          # Corpo (descrição) do Pull Request
+          body: |
+            Este PR foi gerado automaticamente pelo GitHub Actions.
+
+            A branch `${{ github.ref_name }}` passou por todas as validações de Terraform:
+            - `terraform fmt -check`
+            - `terraform init`
+            - `terraform validate`
+            - `terraform plan`
+
+            **Por favor, revise as mudanças antes de aprovar e fazer o merge.**
+
+          # A branch de origem (a branch 'feature/' que acionou o workflow)
+          branch: ${{ github.ref_name }}
+
+          # A branch de destino do Pull Request
+          base: develop
+
+          # Adiciona labels ao PR para fácil identificação
+          labels: terraform, automated-pr
+
+          # Opcional: Atribui o PR à pessoa que fez o commit
+          assignees: ${{ github.actor }}
