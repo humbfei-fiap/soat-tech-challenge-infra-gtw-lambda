@@ -1,77 +1,66 @@
-# Role para as Lambdas dos Triggers do Cognito
-resource "aws_iam_role" "cognito_trigger_lambda_role" {
-  name = "${var.project_name}-cognito-trigger-role"
-  assume_role_policy = jsonencode({
-    Version   = "2012-10-17",
-    Statement = [{
-      Action    = "sts:AssumeRole",
-      Effect    = "Allow",
-      Principal = { Service = "lambda.amazonaws.com" }
-    }]
-  })
-}
-
-# Política de permissões para os triggers
-resource "aws_iam_policy" "cognito_trigger_lambda_policy" {
-  name        = "${var.project_name}-cognito-trigger-policy"
-  description = "Permissões para os triggers do Cognito enviarem SMS e logar"
+# Política IAM que permite à Lambda escrever logs no CloudWatch
+resource "aws_iam_policy" "lambda_logging" {
+  name        = "${var.project_name}-lambda-logging-policy"
+  description = "Política para logs do CloudWatch"
   policy = jsonencode({
-    Version   = "2012-10-17",
+    Version = "2012-10-17",
     Statement = [
       {
-        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
         Effect   = "Allow",
         Resource = "arn:aws:logs:*:*:*"
-      },
-      {
-        Action   = ["sns:Publish"],
-        Effect   = "Allow",
-        Resource = "*" # Para produção, restrinja ao tópico SNS específico
       }
     ]
   })
 }
 
-resource "aws_iam_role_policy_attachment" "cognito_trigger_attach" {
-  role       = aws_iam_role.cognito_trigger_lambda_role.name
-  policy_arn = aws_iam_policy.cognito_trigger_lambda_policy.arn
-}
-
-# Role para a Lambda do API Gateway (Orchestrator)
-resource "aws_iam_role" "orchestrator_lambda_role" {
-  name = "${var.project_name}-orchestrator-role"
-  assume_role_policy = jsonencode({
-    Version   = "2012-10-17",
-    Statement = [{
-      Action    = "sts:AssumeRole",
-      Effect    = "Allow",
-      Principal = { Service = "lambda.amazonaws.com" }
-    }]
-  })
-}
-
-# Política para a Lambda Orchestrator chamar o Cognito
-resource "aws_iam_policy" "orchestrator_lambda_policy" {
-  name        = "${var.project_name}-orchestrator-policy"
-  description = "Permite que a Lambda orquestradora chame o Cognito"
+# Política IAM que permite à Lambda consultar o Cognito User Pool
+resource "aws_iam_policy" "lambda_cognito_read" {
+  name        = "${var.project_name}-lambda-cognito-policy"
+  description = "Política para consultar usuários no Cognito"
   policy = jsonencode({
-    Version   = "2012-10-17",
+    Version = "2012-10-17",
     Statement = [
       {
-        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
+        Action   = ["cognito-idp:ListUsers"],
         Effect   = "Allow",
-        Resource = "arn:aws:logs:*:*:*"
-      },
-      {
-        Action   = ["cognito-idp:AdminInitiateAuth", "cognito-idp:AdminRespondToAuthChallenge"],
-        Effect   = "Allow",
-        Resource = aws_cognito_user_pool.user_pool.arn
+        # Restringe a permissão apenas ao User Pool específico
+        Resource = "arn:aws:cognito-idp:${var.aws_region}:${data.aws_caller_identity.current.account_id}:userpool/${var.cognito_user_pool_id}"
       }
     ]
   })
 }
 
-resource "aws_iam_role_policy_attachment" "orchestrator_attach" {
-  role       = aws_iam_role.orchestrator_lambda_role.name
-  policy_arn = aws_iam_policy.orchestrator_lambda_policy.arn
+# Role que a função Lambda irá assumir
+resource "aws_iam_role" "lambda_exec_role" {
+  name = "${var.project_name}-lambda-exec-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
 }
+
+# Anexa as políticas à role
+resource "aws_iam_role_policy_attachment" "lambda_logs_attach" {
+  role       = aws_iam_role.lambda_exec_role.name
+  policy_arn = aws_iam_policy.lambda_logging.arn
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_cognito_attach" {
+  role       = aws_iam_role.lambda_exec_role.name
+  policy_arn = aws_iam_policy.lambda_cognito_read.arn
+}
+
+data "aws_caller_identity" "current" {}

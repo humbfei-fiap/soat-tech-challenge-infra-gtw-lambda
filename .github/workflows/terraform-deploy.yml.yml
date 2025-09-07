@@ -1,0 +1,42 @@
+name: 'Terraform Deploy to AWS'
+
+# Gatilho: Acionado em qualquer push para a branch 'develop'
+on:
+  push:
+    branches:
+      - develop
+
+permissions:
+  id-token: write   # Necessário para autenticação OIDC com a AWS
+  contents: read    # Apenas leitura do código é necessária para o deploy
+
+jobs:
+  deploy-to-develop:
+    name: 'Deploy to Develop Environment'
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Faz o checkout do código
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Configura as credenciais da AWS via OIDC
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # 3. Instala e configura o Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.5
+
+      # 4. Inicializa o Terraform
+      - name: Terraform Init
+        run: terraform init
+
+      # 5. Aplica as mudanças na infraestrutura da AWS
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -input=false

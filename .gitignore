@@ -1,0 +1,61 @@
+### Terraform ###
+# Ignore local state files, which can contain secrets and should not be versioned.
+# Use a remote backend like S3 for team collaboration.
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+# Ignore plan files, which can also contain sensitive information.
+*.tfplan*
+
+# Ignore the .terraform directory, which contains provider plugins and modules.
+# The .terraform.lock.hcl file should be committed to version control, so it's NOT listed here.
+terraform/.terraform/
+.terraform.lock.hcl
+# Ignore crash logs
+crash.log
+crash.*.log
+
+# Generated archives by Terraform
+# These are created by the 'archive_file' data source during 'terraform plan/apply'.
+*.zip
+
+### Node.js ###
+# Ignore dependency directories and log files
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+### Python ###
+# Ignore virtual environment directories and cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+### IDE & Editor directories ###
+.project
+.classpath
+.settings/
+.idea/
+.vscode/
+.factorypath
+
+### OS-generated files ###
+.DS_Store
+Thumbs.db
+
+### Generic log files and packages ###
+*.log
+*.class
+*.jar
+*.war
+*.ear
+*.tar.gz
+*.rar
+hs_err_pid*.log
+.mtj.tmp/
+target/
