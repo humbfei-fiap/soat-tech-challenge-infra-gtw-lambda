@@ -3,7 +3,7 @@ resource "aws_api_gateway_rest_api" "api" {
   name        = "${var.project_name}-api"
   description = "API para autenticação de clientes"
 }
-
+ 
 # Cria um recurso (ex: /clientes)
 resource "aws_api_gateway_resource" "resource" {
   rest_api_id = aws_api_gateway_rest_api.api.id
