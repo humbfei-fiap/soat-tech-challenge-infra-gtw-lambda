@@ -9,7 +9,7 @@
 
 # Ignore the .terraform directory, which contains provider plugins and modules.
 # The .terraform.lock.hcl file should be committed to version control, so it's NOT listed here.
-terraform/.terraform/
+.terraform/
 .terraform.lock.hcl
 # Ignore crash logs
 crash.log
