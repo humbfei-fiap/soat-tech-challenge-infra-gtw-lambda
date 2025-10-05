@@ -1,4 +1,4 @@
-output "api_endpoint" {
-  description = "URL base do API Gateway para invocar a função."
-  value       = aws_api_gateway_stage.stage.invoke_url
+output "api_invoke_url" {
+  description = "A URL de invocação para o estágio 'v1' do API Gateway."
+  value       = aws_api_gateway_stage.this.invoke_url
 }

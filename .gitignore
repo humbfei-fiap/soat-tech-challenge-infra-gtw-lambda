@@ -4,8 +4,13 @@
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
+
 # Ignore plan files, which can also contain sensitive information.
 *.tfplan*
+
+# Ignore user-specific variable values
+
+*.tfvars.json
 
 # Ignore the .terraform directory, which contains provider plugins and modules.
 # The .terraform.lock.hcl file should be committed to version control, so it's NOT listed here.

@@ -49,3 +49,18 @@ POST /payments/create
 GET /payments/{payment_id}/status
 # 4.3 Atualizar status do pagamento (recebe a notificação webhook)
 POST /payments/{payment_id}/status
+
+# SOAT Tech Challenge - Infra com API Gateway e Lambda
+
+Este repositório contém a infraestrutura para um API Gateway com autenticação usando Cognito e Lambda Authorizer.
+
+## Estrutura
+- **Terraform**: Provisiona os recursos AWS.
+- **Lambda**: Contém os códigos das funções Lambda.
+
+## Como usar
+1. Configure suas credenciais AWS.
+2. Execute os comandos Terraform:
+   ```bash
+   terraform init
+   terraform apply
