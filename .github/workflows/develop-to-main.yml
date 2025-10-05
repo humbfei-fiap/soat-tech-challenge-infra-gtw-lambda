@@ -1,0 +1,44 @@
+name: 'Create PR to Main'
+on:
+  push:
+    branches:
+      - develop
+
+permissions:
+  pull-requests: write
+  contents: write
+
+jobs:
+  create_pr:
+    name: 'Create PR to Main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create or Update Pull Request to Main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Garante que estamos na branch develop mais recente
+          git fetch origin develop
+          git checkout develop
+          git reset --hard origin/develop
+
+          existing_pr=$(gh pr list --base "main" --head "develop" --json number -q '.[0].number')
+          
+          if [ -z "$existing_pr" ]; then
+            echo "No existing PR found from develop to main. Creating a new one."
+
+            gh pr create \
+              --base main \
+              --head develop \
+              --title "Infra: Deploy from Develop to Main" \
+              --body "Este PR foi gerado automaticamente após um push na branch develop.
+              As mudanças de infraestrutura serão aplicadas na 'main' após a aprovação e merge deste PR."
+          else
+            echo "A PR (#$existing_pr) from develop to main already exists. Nothing to do."
+          fi
