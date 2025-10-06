@@ -22,7 +22,7 @@ crash.*.log
 
 # Generated archives by Terraform
 # These are created by the 'archive_file' data source during 'terraform plan/apply'.
-*.zip
+
 
 ### Node.js ###
 # Ignore dependency directories and log files

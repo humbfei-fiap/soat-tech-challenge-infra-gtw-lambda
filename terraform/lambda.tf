@@ -1,9 +1,27 @@
-# Empacota o código-fonte da Lambda e suas dependências em um arquivo zip
+resource "null_resource" "build_lambda" {
+  # Dispara a reconstrução se o código da lambda ou as dependências mudarem
+  triggers = {
+    lambda_code_hash = filebase64sha256("${path.module}/../lambda/authorizer/lambda.py")
+    requirements_hash = filebase64sha256("${path.module}/../lambda/authorizer/requirements.txt")
+  }
 
+  provisioner "local-exec" {
+    command = <<EOT
+      mkdir -p "${path.module}/build/lambda"
+      pip install --platform manylinux2014_x86_64 --implementation cp --python-version 3.9 --only-binary=:all: -r "${path.module}/../lambda/authorizer/requirements.txt" -t "${path.module}/build/lambda"
+      cp "${path.module}/../lambda/authorizer/lambda.py" "${path.module}/build/lambda/"
+    EOT
+  }
+}
+
+# Empacota o diretório de build que agora contém as dependências
 data "archive_file" "lambda_authorizer_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/../lambda/authorizer"
+  source_dir  = "${path.module}/build/lambda"
   output_path = "${path.module}/../lambda_authorizer.zip"
+  depends_on = [
+    null_resource.build_lambda
+  ]
 }
 
 
