@@ -7,21 +7,20 @@ resource "null_resource" "build_lambda" {
 
   provisioner "local-exec" {
     command = <<EOT
-      mkdir -p "${path.module}/build/lambda"
-      pip install --platform manylinux2014_x86_64 --implementation cp --python-version 3.9 --only-binary=:all: -r "${path.module}/../lambda/authorizer/requirements.txt" -t "${path.module}/build/lambda"
-      cp "${path.module}/../lambda/authorizer/lambda.py" "${path.module}/build/lambda/"
+      set -e
+      BUILD_DIR="${path.module}/../build/lambda"
+      ZIP_FILE="${path.module}/../lambda_authorizer.zip"
+      echo "Creating build directory $BUILD_DIR"
+      mkdir -p "$BUILD_DIR"
+      echo "Installing requirements"
+      pip install --platform manylinux2014_x86_64 --implementation cp --python-version 3.9 --only-binary=:all: -r "${path.module}/../lambda/authorizer/requirements.txt" -t "$BUILD_DIR"
+      echo "Copying lambda code"
+      cp "${path.module}/../lambda/authorizer/lambda.py" "$BUILD_DIR/lambda.py"
+      echo "Creating zip file $ZIP_FILE"
+      cd "$BUILD_DIR"
+      zip -r "$ZIP_FILE" .
     EOT
   }
-}
-
-# Empacota o diretório de build que agora contém as dependências
-data "archive_file" "lambda_authorizer_zip" {
-  type        = "zip"
-  source_dir  = "${path.module}/build/lambda"
-  output_path = "${path.module}/../lambda_authorizer.zip"
-  depends_on = [
-    null_resource.build_lambda
-  ]
 }
 
 
@@ -31,8 +30,9 @@ resource "aws_lambda_function" "authorizer" {
   runtime       = "python3.9"
   role          = aws_iam_role.lambda_authorizer_role.arn
 
-  filename         = data.archive_file.lambda_authorizer_zip.output_path
-  source_code_hash = data.archive_file.lambda_authorizer_zip.output_base64sha256
+  filename         = "${path.module}/../lambda_authorizer.zip"
+  # O source_code_hash foi removido para evitar problemas de "chicken-and-egg" no planejamento do Terraform.
+  # A função Lambda será atualizada sempre que os gatilhos do recurso 'build_lambda' mudarem.
 
   timeout = 10 # Tempo máximo de execução em segundos
 
@@ -56,7 +56,7 @@ resource "aws_lambda_function" "authorizer" {
   }
 
   depends_on = [
-    data.archive_file.lambda_authorizer_zip
+    null_resource.build_lambda
   ]
 }
 
