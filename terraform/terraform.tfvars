@@ -13,3 +13,5 @@ db_name = "fastdb"
 # Nome da tabela e coluna para validação de CPF
 db_table      = "customers"
 db_cpf_column = "cpf"
+
+jwt_secret = "fiap"
