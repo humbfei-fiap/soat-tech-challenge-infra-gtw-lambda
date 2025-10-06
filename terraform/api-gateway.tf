@@ -37,6 +37,7 @@ resource "aws_api_gateway_integration" "post_customers_create_integration" {
   resource_id             = aws_api_gateway_resource.customers_create.id
   http_method             = aws_api_gateway_method.post_customers_create.http_method
   type                    = "HTTP_PROXY"
+  integration_http_method = "POST"
   connection_id           = aws_api_gateway_vpc_link.this.id
   uri                     = "http://${data.aws_lb.this.dns_name}/customers/create"
 }
@@ -62,6 +63,7 @@ resource "aws_api_gateway_integration" "get_swagger_integration" {
   resource_id             = aws_api_gateway_resource.swagger_ui.id
   http_method             = aws_api_gateway_method.get_swagger.http_method
   type                    = "HTTP_PROXY"
+  integration_http_method = "GET"
   connection_id           = aws_api_gateway_vpc_link.this.id
   uri                     = "http://${data.aws_lb.this.dns_name}/swagger-ui/"
 }
