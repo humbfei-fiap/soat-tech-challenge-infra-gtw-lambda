@@ -25,7 +25,7 @@ resource "aws_iam_policy" "secrets_manager_policy" {
       {
         Action   = "secretsmanager:GetSecretValue",
         Effect   = "Allow",
-        Resource = aws_secretsmanager_secret.db_credentials.arn
+        Resource = data.aws_secretsmanager_secret.db_credentials.arn
       }
     ]
   })
