@@ -114,14 +114,6 @@ resource "aws_api_gateway_integration" "auth_lambda_integration" {
   uri                     = aws_lambda_function.authorizer.invoke_arn
 }
 
-
-# Recurso curinga para capturar qualquer outro caminho na URL (ex: /products, /orders)
-resource "aws_api_gateway_resource" "proxy" {
-  rest_api_id = aws_api_gateway_rest_api.this.id
-  parent_id   = aws_api_gateway_rest_api.this.root_resource_id
-  path_part   = "{proxy+}"
-}
-
 # Método ANY para o recurso curinga
 resource "aws_api_gateway_method" "proxy_any" {
   rest_api_id   = aws_api_gateway_rest_api.this.id
