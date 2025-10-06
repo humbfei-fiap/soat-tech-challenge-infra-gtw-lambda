@@ -1,43 +1,5 @@
-# Política IAM que permite à Lambda escrever logs no CloudWatch
-resource "aws_iam_policy" "lambda_logging" {
-  name        = "${var.project_name}-lambda-logging-policy"
-  description = "Política para logs do CloudWatch"
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ],
-        Effect   = "Allow",
-        Resource = "arn:aws:logs:*:*:*"
-      }
-    ]
-  })
-}
-
-# Política IAM que permite à Lambda consultar o Cognito User Pool
-resource "aws_iam_policy" "lambda_cognito_read" {
-  name        = "${var.project_name}-lambda-cognito-policy"
-  description = "Política para consultar usuários no Cognito"
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Action   = ["cognito-idp:ListUsers"],
-        Effect   = "Allow",
-        # Restringe a permissão apenas ao User Pool específico
-        Resource = "arn:aws:cognito-idp:${var.aws_region}:${data.aws_caller_identity.current.account_id}:userpool/${var.cognito_user_pool_id}"
-      }
-    ]
-  })
-}
-
-# Role que a função Lambda irá assumir
-resource "aws_iam_role" "lambda_exec_role" {
-  name = "${var.project_name}-lambda-exec-role"
+resource "aws_iam_role" "lambda_authorizer_role" {
+  name = "soat-lambda-authorizer-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
@@ -52,15 +14,37 @@ resource "aws_iam_role" "lambda_exec_role" {
   })
 }
 
-# Anexa as políticas à role
-resource "aws_iam_role_policy_attachment" "lambda_logs_attach" {
-  role       = aws_iam_role.lambda_exec_role.name
-  policy_arn = aws_iam_policy.lambda_logging.arn
+# Política para permitir acesso ao segredo do banco de dados
+resource "aws_iam_policy" "secrets_manager_policy" {
+  name        = "soat-lambda-secrets-manager-policy"
+  description = "Permite que a Lambda leia o segredo do banco de dados."
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action   = "secretsmanager:GetSecretValue",
+        Effect   = "Allow",
+        Resource = aws_secretsmanager_secret.db_credentials.arn
+      }
+    ]
+  })
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_cognito_attach" {
-  role       = aws_iam_role.lambda_exec_role.name
-  policy_arn = aws_iam_policy.lambda_cognito_read.arn
+# Anexa a política de acesso ao segredo à role da Lambda
+resource "aws_iam_role_policy_attachment" "secrets_manager_attach" {
+  role       = aws_iam_role.lambda_authorizer_role.name
+  policy_arn = aws_iam_policy.secrets_manager_policy.arn
 }
 
-data "aws_caller_identity" "current" {}
+# Anexa a política básica de execução da Lambda (para logs no CloudWatch)
+resource "aws_iam_role_policy_attachment" "basic_execution_attach" {
+  role       = aws_iam_role.lambda_authorizer_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# Anexa a política de acesso à VPC (necessário para a Lambda se conectar a recursos na VPC)
+resource "aws_iam_role_policy_attachment" "vpc_access_attach" {
+  role       = aws_iam_role.lambda_authorizer_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}

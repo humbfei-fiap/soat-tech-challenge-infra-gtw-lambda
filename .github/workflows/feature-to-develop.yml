@@ -1,0 +1,57 @@
+name: 'Create PR to Develop'
+
+on:
+  push:
+    branches:
+      - 'feature/*'
+
+permissions:
+  pull-requests: write
+  contents: write
+
+  
+jobs:
+  create-pull-request:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch all branches
+        run: git fetch --all
+      - name: Create labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "automacao" --description "Pull Request criado por automação" --color "c5def5" || echo "Label 'automacao' já existe."
+          gh label create "para-revisao" --description "PR pronto para revisão" --color "fbca04" || echo "Label 'para-revisao' já existe."
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          existing_pr=$(gh pr list --head "$BRANCH_NAME" --base "develop" --json number -q '.[0].number')
+          
+          if [ -z "$existing_pr" ]; then
+            echo "No existing PR found for branch $BRANCH_NAME. Creating a new one."
+            
+            COMMIT_LOG=$(git log origin/develop.."$BRANCH_NAME" --oneline --pretty=format:"- %s")
+
+            {
+              echo "This PR was created automatically. Please review the changes."
+              echo ""
+              echo "### Commits in this branch:"
+              echo "$COMMIT_LOG"
+            } > PR_BODY.md
+
+            gh pr create \
+              --base develop \
+              --head "$BRANCH_NAME" \
+              --title "PR aberto automaticamente: ${{ github.ref_name }} -> develop" \
+              --body-file PR_BODY.md \
+              --label "automacao,para-revisao"
+          else
+            echo "A PR (#$existing_pr) already exists for branch $BRANCH_NAME. Doing nothing."
+          fi

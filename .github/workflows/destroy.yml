@@ -1,0 +1,57 @@
+name: 'Terraform - Destroy GTW & Lambda'
+
+on:
+  workflow_dispatch: # Permite acionamento manual
+    inputs:
+      confirm_destroy:
+        description: 'Marque para confirmar a destruição. CUIDADO: Isso deletará todos os recursos.'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write # Permissão para o workflow obter um OIDC token
+  contents: read  # Permissão para o workflow ler o repositório
+
+# Garante que nenhuma outra operação de terraform (plan, apply) rode em paralelo.
+concurrency:
+  group: terraform-state-lock
+  cancel-in-progress: false # Não cancelar a destruição se outro workflow for iniciado
+
+jobs:
+  destroy:
+    name: 'Terraform Destroy'
+    # Adiciona uma camada de proteção com aprovação manual obrigatória.
+    environment:
+      name: 'production'
+      # O URL aponta para a execução do workflow para fácil acesso
+      url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    if: ${{ github.event.inputs.confirm_destroy }}
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./terraform # Indica que os comandos devem rodar na pasta terraform
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-east-1
+          audience: sts.amazonaws.com
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+      - name: Terraform Init
+        id: init
+        run: terraform init
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve -input=false
