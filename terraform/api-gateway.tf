@@ -71,59 +71,7 @@ resource "aws_api_gateway_integration" "get_swagger_integration" {
 }
 
 
-# --- Seção de Endpoints Privados (com autorizador) ---
 
-# Define o autorizador customizado que usa a nossa função Lambda
-resource "aws_api_gateway_authorizer" "cpf_authorizer" {
-  name                   = "soat-cpf-authorizer"
-  rest_api_id            = aws_api_gateway_rest_api.this.id
-  authorizer_uri         = aws_lambda_function.authorizer.invoke_arn
-  authorizer_credentials = aws_iam_role.api_gateway_authorizer_role.arn
-  type                   = "TOKEN"
-  identity_source        = "method.request.header.cpf" # Onde o API Gateway vai procurar o token (CPF)
-  authorizer_result_ttl_in_seconds = 0 # Desabilitar cache para desenvolvimento, aumentar em produção
-}
-
-# Role para permitir que o API Gateway invoque a Lambda do autorizador
-resource "aws_iam_role" "api_gateway_authorizer_role" {
-  name = "soat-api-gateway-authorizer-invocation-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Action = "sts:AssumeRole",
-        Effect = "Allow",
-        Principal = {
-          Service = "apigateway.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy" "api_gateway_authorizer_policy" {
-  name = "soat-api-gateway-authorizer-invocation-policy"
-  role = aws_iam_role.api_gateway_authorizer_role.id
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Action   = "lambda:InvokeFunction",
-        Effect   = "Allow",
-        Resource = aws_lambda_function.authorizer.arn
-      }
-    ]
-  })
-}
-
-# Permissão explícita para o API Gateway invocar a função Lambda
-resource "aws_lambda_permission" "api_gateway_invoke" {
-  statement_id  = "AllowAPIGatewayToInvokeAuthorizer"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.authorizer.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.this.execution_arn}/authorizers/${aws_api_gateway_authorizer.cpf_authorizer.id}"
-}
 
 # Recurso curinga para capturar qualquer outro caminho na URL (ex: /products, /orders)
 resource "aws_api_gateway_resource" "proxy" {
@@ -132,13 +80,54 @@ resource "aws_api_gateway_resource" "proxy" {
   path_part   = "{proxy+}"
 }
 
-# Método ANY para o recurso curinga, aplicando nosso autorizador
+# Permissão para o API Gateway invocar a função Lambda de autenticação
+resource "aws_lambda_permission" "api_gateway_invoke_auth" {
+  statement_id  = "AllowAPIGatewayToInvokeAuthLambda"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.authorizer.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.this.execution_arn}/*/*"
+}
+
+# Recurso para /auth
+resource "aws_api_gateway_resource" "auth" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  parent_id   = aws_api_gateway_rest_api.this.root_resource_id
+  path_part   = "auth"
+}
+
+# Método GET para /auth
+resource "aws_api_gateway_method" "get_auth" {
+  rest_api_id   = aws_api_gateway_rest_api.this.id
+  resource_id   = aws_api_gateway_resource.auth.id
+  http_method   = "GET"
+  authorization = "NONE"
+}
+
+# Integração com a Lambda para a rota /auth
+resource "aws_api_gateway_integration" "auth_lambda_integration" {
+  rest_api_id             = aws_api_gateway_rest_api.this.id
+  resource_id             = aws_api_gateway_resource.auth.id
+  http_method             = aws_api_gateway_method.get_auth.http_method
+  integration_http_method = "POST" # Sempre POST para integração AWS_PROXY
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.authorizer.invoke_arn
+}
+
+
+# Recurso curinga para capturar qualquer outro caminho na URL (ex: /products, /orders)
+resource "aws_api_gateway_resource" "proxy" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  parent_id   = aws_api_gateway_rest_api.this.root_resource_id
+  path_part   = "{proxy+}"
+}
+
+# Método ANY para o recurso curinga
 resource "aws_api_gateway_method" "proxy_any" {
   rest_api_id   = aws_api_gateway_rest_api.this.id
   resource_id   = aws_api_gateway_resource.proxy.id
   http_method   = "ANY"
-  authorization = "CUSTOM"
-  authorizer_id = aws_api_gateway_authorizer.cpf_authorizer.id
+  authorization = "NONE"
 
   request_parameters = {
     "method.request.path.proxy" = true
@@ -173,9 +162,9 @@ resource "aws_api_gateway_deployment" "this" {
       proxy_resource = aws_api_gateway_resource.proxy.id,
       proxy_method = aws_api_gateway_method.proxy_any.id,
       proxy_integration = aws_api_gateway_integration.proxy_integration.id,
-      authorizer = aws_api_gateway_authorizer.cpf_authorizer.id,
       customers_create_method = aws_api_gateway_method.post_customers_create.id,
-      swagger_method = aws_api_gateway_method.get_swagger.id
+      swagger_method = aws_api_gateway_method.get_swagger.id,
+      auth_method = aws_api_gateway_method.get_auth.id
     })))
     # Adiciona um gatilho de tempo para forçar o deploy em qualquer 'apply'
     timestamp = timestamp()
