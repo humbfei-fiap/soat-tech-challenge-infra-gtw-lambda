@@ -25,8 +25,14 @@ variable "db_table" {
 }
 
 variable "db_cpf_column" {
-  description = "O nome da coluna que armazena o CPF."
+  description = "Nome da coluna que armazena o CPF na tabela de clientes."
   type        = string
+}
+
+variable "jwt_secret" {
+  description = "Segredo para assinar o token JWT."
+  type        = string
+  sensitive   = true
 }
 
 variable "db_secret_arn" {

@@ -44,6 +44,7 @@ resource "aws_lambda_function" "authorizer" {
       DB_NAME        = var.db_name
       DB_TABLE       = var.db_table
       DB_CPF_COLUMN  = var.db_cpf_column
+      JWT_SECRET     = var.jwt_secret
     }
   }
 
