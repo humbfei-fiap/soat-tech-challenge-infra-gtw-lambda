@@ -14,4 +14,4 @@ db_name = "fastdb"
 db_table      = "customers"
 db_cpf_column = "cpf"
 
-jwt_secret = "fiap"
+jwt_secret = "fiap130"
