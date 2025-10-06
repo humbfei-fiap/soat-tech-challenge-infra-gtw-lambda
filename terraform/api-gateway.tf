@@ -73,13 +73,6 @@ resource "aws_api_gateway_integration" "get_swagger_integration" {
 
 
 
-# Recurso curinga para capturar qualquer outro caminho na URL (ex: /products, /orders)
-resource "aws_api_gateway_resource" "proxy" {
-  rest_api_id = aws_api_gateway_rest_api.this.id
-  parent_id   = aws_api_gateway_rest_api.this.root_resource_id
-  path_part   = "{proxy+}"
-}
-
 # Permissão para o API Gateway invocar a função Lambda de autenticação
 resource "aws_lambda_permission" "api_gateway_invoke_auth" {
   statement_id  = "AllowAPIGatewayToInvokeAuthLambda"
@@ -89,14 +82,13 @@ resource "aws_lambda_permission" "api_gateway_invoke_auth" {
   source_arn    = "${aws_api_gateway_rest_api.this.execution_arn}/*/*"
 }
 
-# Recurso para /auth
+# --- Rota de Autenticação /auth ---
 resource "aws_api_gateway_resource" "auth" {
   rest_api_id = aws_api_gateway_rest_api.this.id
   parent_id   = aws_api_gateway_rest_api.this.root_resource_id
   path_part   = "auth"
 }
 
-# Método GET para /auth
 resource "aws_api_gateway_method" "get_auth" {
   rest_api_id   = aws_api_gateway_rest_api.this.id
   resource_id   = aws_api_gateway_resource.auth.id
@@ -104,7 +96,6 @@ resource "aws_api_gateway_method" "get_auth" {
   authorization = "NONE"
 }
 
-# Integração com a Lambda para a rota /auth
 resource "aws_api_gateway_integration" "auth_lambda_integration" {
   rest_api_id             = aws_api_gateway_rest_api.this.id
   resource_id             = aws_api_gateway_resource.auth.id
@@ -114,7 +105,13 @@ resource "aws_api_gateway_integration" "auth_lambda_integration" {
   uri                     = aws_lambda_function.authorizer.invoke_arn
 }
 
-# Método ANY para o recurso curinga
+# --- Rota Curinga {proxy+} ---
+resource "aws_api_gateway_resource" "proxy" {
+  rest_api_id = aws_api_gateway_rest_api.this.id
+  parent_id   = aws_api_gateway_rest_api.this.root_resource_id
+  path_part   = "{proxy+}"
+}
+
 resource "aws_api_gateway_method" "proxy_any" {
   rest_api_id   = aws_api_gateway_rest_api.this.id
   resource_id   = aws_api_gateway_resource.proxy.id
@@ -126,7 +123,6 @@ resource "aws_api_gateway_method" "proxy_any" {
   }
 }
 
-# Integração com o NLB via VPC Link para os endpoints privados
 resource "aws_api_gateway_integration" "proxy_integration" {
   rest_api_id             = aws_api_gateway_rest_api.this.id
   resource_id             = aws_api_gateway_resource.proxy.id
