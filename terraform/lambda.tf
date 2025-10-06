@@ -20,7 +20,7 @@ resource "aws_lambda_function" "authorizer" {
 
   environment {
     variables = {
-      DB_SECRET_NAME = aws_secretsmanager_secret.db_credentials.name
+      DB_SECRET_NAME = data.aws_secretsmanager_secret.db_credentials.name
       DB_HOST        = var.db_host
       DB_PORT        = var.db_port
       DB_NAME        = var.db_name

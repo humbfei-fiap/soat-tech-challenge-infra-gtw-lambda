@@ -1,4 +1,4 @@
-name: 'Terraform Deploy to AWS'
+name: 'Terraform - Deploy GTW & Lambda'
 
 on:
   push:
@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  terraform-eks:
-    name: 'Deploy EKS Cluster'
+  terraform-deploy:
+    name: 'Terraform Deploy'
     runs-on: ubuntu-latest
     
     defaults:
@@ -37,7 +37,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.8.5
+          terraform_version: 1.5.7
 
       - name: Terraform Init
         id: init
@@ -47,27 +47,6 @@ jobs:
         id: plan
         run: terraform plan -out=tfplan
 
-      - name: Terraform Init & Apply EKS
+      - name: Terraform Apply
         id: apply
-        run:  terraform apply -target=module.eks -auto-approve
-
-        # --- JOB 2: Instala os addons ---
-  terraform-addons:
-    name: 'Deploy EKS Cluster'
-    needs: terraform-eks
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: us-east-1
-          audience: sts.amazonaws.com
-
-      - name: Terraform Init & Apply Addons
-        run: |
-          terraform init
-          terraform apply -auto-approve
+        run: terraform apply -auto-approve tfplan

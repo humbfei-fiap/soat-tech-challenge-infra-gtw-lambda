@@ -1,7 +1,6 @@
 variable "nlb_arn" {
   description = "O ARN (Amazon Resource Name) do Network Load Balancer interno."
   type        = string
-  default     = "arn:aws:elasticloadbalancing:us-east-1:239409137076:loadbalancer/net/a55050bb9d3e94617963c75989c246e8/0de125b3a546a62b"
 }
 
 variable "db_host" {

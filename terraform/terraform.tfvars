@@ -1,3 +1,6 @@
+# ARN do Network Load Balancer
+nlb_arn = "arn:aws:elasticloadbalancing:us-east-1:239409137076:loadbalancer/net/a8a84b9af455f417da4eab7da911da86/0c2f5acb6e5b18de"
+
 # Detalhes da VPC e Sub-redes
 vpc_id             = "vpc-8ce247f1"
 private_subnet_ids = ["subnet-c3f47da5", "subnet-8a652684"]
