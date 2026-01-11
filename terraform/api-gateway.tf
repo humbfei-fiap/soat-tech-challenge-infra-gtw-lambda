@@ -1,6 +1,6 @@
 locals {
   # Lista de serviços que correspondem aos caminhos no Ingress
-  services = toset(["orders", "payments", "products", "customers"])
+  services = toset(["orders", "payments", "products", "customers", "webhook", "mock"])
 }
 
 resource "aws_api_gateway_rest_api" "this" {
